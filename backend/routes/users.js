@@ -1,19 +1,24 @@
 import express from 'express';
 import Joi from 'joi';
 import jwt from 'jsonwebtoken';
-import 'dotenv/config'
+import 'dotenv/config';
 import userServices from '../services/users.js';
 import auth from '../middleware/auth.js'
+import orgServices from '../services/org.js';
 var router = express.Router();
 
+// signup for admin
 router.post('/signup', async function (req, res, next) {
   const validationSchema = Joi.object({
     email: Joi.string().required(),
     password: Joi.string().required(),
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
-    gender: Joi.string().required(),
-    age: Joi.number().required()
+    gender: Joi.string().required().allow("male","female","others"),
+    age: Joi.number().required(),
+    role: Joi.string().default('admin'),
+    permissions: Joi.string().allow('[]'),
+    orgName: Joi.string().required(),
   })
   try {
     const validatedBody = await validationSchema.validateAsync(req.body);
@@ -23,10 +28,28 @@ router.post('/signup', async function (req, res, next) {
     if (existingEmail) {
       return res.status(400).json({
         message: "Email already exists",
-        error: true
+        error: true,
+        data: null
       })
     }
+    const existingOrg = await orgServices.findOne({
+      orgName: validatedBody.orgName
+    })
+    if (existingOrg && existingOrg.orgName.toLowerCase() === validatedBody.orgName.toLowerCase()) {
+      return res.status(400).json({
+        message: "Organisation name already exists",
+        error: true,
+        data: null
+      })
+    }
+    const orgCreated = await orgServices.createOne({
+      orgName: validatedBody.orgName
+    })
+    validatedBody.organisationId = orgCreated.id
+    validatedBody.isActive = "true"
+    delete validatedBody.orgName
     const result = await userServices.createOne(validatedBody);
+
     return res.status(200).json({
       message: "User created successfully",
       error: false,
@@ -35,10 +58,14 @@ router.post('/signup', async function (req, res, next) {
 
   } catch (error) {
     console.log(`Error while signing up in CATCH : ${error}`)
+    await orgServices.deleteOne({
+      orgName:req.body.orgName
+    })
     return next(error)
   }
-})
+});
 
+// login for any role
 router.post('/login', async function (req, res, next) {
   const validationSchema = Joi.object({
     email: Joi.string().required(),
@@ -55,8 +82,8 @@ router.post('/login', async function (req, res, next) {
       })
     }
     delete existingUser.password
-    const token = jwt.sign(existingUser, process.env.JWT_SECRET,{
-      expiresIn:process.env.JWT_EXPIRY
+    const token = jwt.sign(existingUser, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRY
     })
     existingUser.token = token
 
@@ -70,9 +97,10 @@ router.post('/login', async function (req, res, next) {
     return next(error)
 
   }
-})
+});
 
-router.put('/updateUser',auth, async (req, res, next) => {
+// currently updates any user (manage the updation via permissions)
+router.put('/updateUser', auth, async (req, res, next) => {
   const validationSchema = Joi.object({
     id: Joi.number().required(),
     email: Joi.string().required(),
@@ -94,12 +122,12 @@ router.put('/updateUser',auth, async (req, res, next) => {
       })
 
     }
-    const { id,...validatedBodyWithoutId } = validatedBody
+    const { id, ...validatedBodyWithoutId } = validatedBody
     // console.log(validatedBodyWithoutId,'validatedBodyWithoutId')
     const updatedUser = await userServices.updateOne({
       id: id
     },
-       validatedBodyWithoutId 
+      validatedBodyWithoutId
     )
     // console.log(updatedUser,'====updated')
     if (updatedUser) {
@@ -120,12 +148,10 @@ router.put('/updateUser',auth, async (req, res, next) => {
     console.log(`Error in updating user CATCH : ${error}`)
     return next(error)
   }
-})
+});
 
-
-
-
-router.delete('/deleteUser',auth, async (req, res, next) => {
+// currently deletes any user (manage the deletion via permissions)
+router.delete('/deleteUser', auth, async (req, res, next) => {
   const validationSchema = Joi.object({
     id: Joi.number().required()
   })
@@ -153,6 +179,6 @@ router.delete('/deleteUser',auth, async (req, res, next) => {
     console.log(`Error while deleting user in CATCH : ${error}`)
     return next(error)
   }
-})
+});
 
 export default router;
