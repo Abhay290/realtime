@@ -2,34 +2,29 @@
 import { prisma } from "../prisma/prisma.js";
 // const prisma = new PrismaClient();
 
-const userServices = {
+const hierarchyServices = {
     findOne: async (query) => {
-        return prisma.user.findFirst({
+        return prisma.hierarchy.findFirst({
             where: query
         });
     },
 
     createOne: async (data) => {
-        return prisma.user.create({
+        return prisma.hierarchy.create({
             data
         });
     },
     updateOne: async (query, data) => {
-        return await prisma.user.update({
+        return await prisma.hierarchy.update({
             where: query,
             data
         })
     },
-    findMany: async (query) => {
-        return await prisma.user.findMany({
-            where: query
-        })
-    },
-    deleteOne: async (query) => {
-        return await prisma.user.delete({
+    deleteOne: async(query) => {
+        return await prisma.hierarchy.delete({
             where: query
         })
     }
 };
 
-export default userServices;
+export default hierarchyServices;

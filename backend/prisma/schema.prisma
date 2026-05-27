@@ -18,7 +18,7 @@ model User {
   updatedAt DateTime @updatedAt
   firstName String?
   lastName  String?
-  age       Int?
+  dob       String?
   gender    String?
   email     String?
   password  String?
@@ -33,4 +33,14 @@ model Organisation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orgName String @unique
+}
+
+model Hierarchy{
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  hierarchyJson String? // stringified json
+  organisationId String?
+  hierarchyName String?
 }

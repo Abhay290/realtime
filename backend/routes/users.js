@@ -14,8 +14,8 @@ router.post('/signup', async function (req, res, next) {
     password: Joi.string().required(),
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
-    gender: Joi.string().required().allow("male","female","others"),
-    age: Joi.number().required(),
+    gender: Joi.string().required().allow("male", "female", "others"),
+    dob: Joi.string().required(),
     role: Joi.string().default('admin'),
     permissions: Joi.string().allow('[]'),
     orgName: Joi.string().required(),
@@ -58,9 +58,6 @@ router.post('/signup', async function (req, res, next) {
 
   } catch (error) {
     console.log(`Error while signing up in CATCH : ${error}`)
-    await orgServices.deleteOne({
-      orgName:req.body.orgName
-    })
     return next(error)
   }
 });
@@ -86,7 +83,10 @@ router.post('/login', async function (req, res, next) {
       expiresIn: process.env.JWT_EXPIRY
     })
     existingUser.token = token
-
+    let organisationName = await orgServices.findOne({
+      id: existingUser.organisationId
+    })
+    existingUser.orgName = organisationName.orgName
     return res.status(200).json({
       message: "Login successfull",
       error: false,
@@ -99,12 +99,45 @@ router.post('/login', async function (req, res, next) {
   }
 });
 
+// get all users info
+
+router.get('/getAllUsers', auth, async (req, res, next) => {
+  const validationSchema = Joi.object({
+    orgId: Joi.string().required()
+  })
+  try {
+    const validatedQuery = await validationSchema.validateAsync(req.query);
+    let userList = await userServices.findMany({ organisationId: validatedQuery.orgId })
+    if (userList.length > 0) {
+      userList.forEach((user) => {
+        delete user.password
+      })
+      return res.status(200).json({
+        message: "Users found successfully",
+        error: false,
+        data: userList
+      })
+    } else {
+      return res.status(404).json({
+        message: "No users found in this organisation",
+        error: true,
+        data: []
+      })
+    }
+
+  } catch (error) {
+    console.log(`Error getting all the users : ${error}`)
+    return next(error)
+  }
+})
+
+
 // currently updates any user (manage the updation via permissions)
 router.put('/updateUser', auth, async (req, res, next) => {
   const validationSchema = Joi.object({
     id: Joi.number().required(),
     email: Joi.string().required(),
-    age: Joi.number().required(),
+    dob: Joi.string().required(),
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
     gender: Joi.string().required()
@@ -180,5 +213,38 @@ router.delete('/deleteUser', auth, async (req, res, next) => {
     return next(error)
   }
 });
+
+router.post('/verifyToken', async (req, res, next) => {
+  try {
+    // const {token} = req.body
+    const { token } = req.body
+    if (!token) {
+      return res.status(404).json({
+        message: "Token not found, Please login again",
+        error: true,
+        data: null
+      })
+    }
+    const decode = jwt.decode(token)
+    // console.log(decode,'====>token decoded')
+    const currentUnixTimeStamp = Math.floor(Date.now() / 1000);
+    if (currentUnixTimeStamp >= decode.exp) {
+      return res.status(400).json({
+        message: "Session expired, login again",
+        error: true,
+        data: null
+      })
+    } else {
+      return res.status(200).json({
+        message: "Token still valid",
+        error: false,
+        data: null
+      })
+    }
+  } catch (error) {
+    console.log(`Error in verify token : ${error}`)
+    return next(error)
+  }
+})
 
 export default router;
