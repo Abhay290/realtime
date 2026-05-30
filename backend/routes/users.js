@@ -99,9 +99,9 @@ router.post('/login', async function (req, res, next) {
   }
 });
 
-// get all users info
+// get all users for select option
 
-router.get('/getAllUsers', auth, async (req, res, next) => {
+router.get('/getAllUsersForSelect', auth, async (req, res, next) => {
   const validationSchema = Joi.object({
     orgId: Joi.string().required()
   })
@@ -112,10 +112,16 @@ router.get('/getAllUsers', auth, async (req, res, next) => {
       userList.forEach((user) => {
         delete user.password
       })
+      let userListForSelect = userList.map((item)=>{
+        return {
+          name:item.email,
+          value:item.id
+        }
+      })
       return res.status(200).json({
         message: "Users found successfully",
         error: false,
-        data: userList
+        data: userListForSelect
       })
     } else {
       return res.status(404).json({

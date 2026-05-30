@@ -11,7 +11,7 @@
            let userData = JSON.parse(localStorage.getItem("userData"));
             let res = await apiHandler(
                 "get",
-                `/users/getAllUsers?orgId=${userData.organisationId}`,
+                `/users/getAllUsersForSelect?orgId=${userData.organisationId}`,
             );
             users = res.data
             // console.log(users)

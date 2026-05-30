@@ -20,8 +20,8 @@
 
 <div class="select-container relative">
     <button class="selected-target" onclick={displayOptions}>
-        {#if selectedOption.email}
-            {selectedOption.email}
+        {#if selectedOption.name}
+            {selectedOption.name}
         {:else}
             Click me
         {/if}
@@ -32,7 +32,7 @@
             <button
                 type="button"
                 class="select-item"
-                onclick={() => selectedTarget(item)}>{item.email}</button
+                onclick={() => selectedTarget(item)}>{item.name}</button
             >
         {/each}
     </div>
